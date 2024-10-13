@@ -25,7 +25,7 @@ class FilmService:
         self.genre_service = genre_service
         self.index = config.ELASTIC_FILM_INDEX
 
-    async def get_by_id(self, film_id) -> FilmDetails:
+    async def get_by_id(self, film_id: str) -> FilmDetails:
         try:
             response = await self.elastic.get(index=self.index, id=film_id)
             film_data = response["_source"]
@@ -78,8 +78,8 @@ class FilmService:
             "size": page_size,
         }
         if genre_id:
-            genre_name = await self.genre_service.get_name_by_id(genre_id)
-            es_query["query"] = {"match": {"genres": genre_name}}
+            genre = await self.genre_service.get_by_id(genre_id)
+            es_query["query"] = {"match": {"genres": genre.name}}
         response = await self.elastic.search(index=self.index, body=es_query)
         hits = response["hits"]["hits"]
         films = [Film(**hit["_source"]) for hit in hits]
