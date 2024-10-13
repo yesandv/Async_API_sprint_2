@@ -10,6 +10,7 @@ from src.core.logger import logger
 from src.db.elastic import get_elastic
 from src.db.redis import get_redis
 from src.models.film import FilmDetails, Film
+from src.models.person_film_work import PersonFilmWork, ROLES
 from src.services.genre import GenreService, get_genre_service
 
 
@@ -84,6 +85,59 @@ class FilmService:
         hits = response["hits"]["hits"]
         films = [Film(**hit["_source"]) for hit in hits]
         return films
+
+    async def get_by_person_name(
+            self, person_name: str
+    ) -> list[PersonFilmWork]:
+        person_film_works = []
+        should_query = [
+            {
+                "nested": {
+                    "path": role,
+                    "query": {"match": {f"{role}.name": person_name}},
+                }
+            }
+            for role in ROLES
+        ]
+        es_query = {
+            "query": {
+                "bool": {"should": should_query, "minimum_should_match": 1}
+            }
+        }
+        response = await self.elastic.search(index=self.index, body=es_query)
+        hits = response["hits"]["hits"]
+        for hit in hits:
+            film_data = hit["_source"]
+            _roles = []
+            for role in ROLES:
+                if any(
+                        data["name"] == person_name
+                        for data in film_data.get(role, [])
+                ):
+                    _roles.append(role.rstrip("s"))
+            if _roles:
+                person_film_works.append(
+                    PersonFilmWork(id=film_data["id"], roles=_roles)
+                )
+        return person_film_works
+
+    async def get_by_person_id(self, person_id: str) -> list[Film]:
+        should_query = [
+            {
+                "nested": {
+                    "path": role,
+                    "query": {"match": {f"{role}.id": person_id}},
+                }
+            }
+            for role in ROLES
+        ]
+        es_query = {
+            "query": {
+                "bool": {"should": should_query, "minimum_should_match": 1}
+            }
+        }
+        response = await self.elastic.search(index=self.index, body=es_query)
+        return [Film(**hit["_source"]) for hit in response["hits"]["hits"]]
 
 
 @lru_cache()
