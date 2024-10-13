@@ -1,29 +1,95 @@
 from functools import lru_cache
 
-from elasticsearch import AsyncElasticsearch
+from elasticsearch import AsyncElasticsearch, NotFoundError
 from fastapi import Depends
+from pydantic import ValidationError
 from redis.asyncio import Redis
 
-from db.elastic import get_elastic
-from db.redis import get_redis
+from src.core import config
+from src.core.logger import logger
+from src.db.elastic import get_elastic
+from src.db.redis import get_redis
+from src.models.film import FilmDetails, Film
+from src.services.genre import GenreService, get_genre_service
 
 
-# FilmService содержит бизнес-логику по работе с фильмами.
-# Никакой магии тут нет. Обычный класс с обычными методами.
-# Этот класс ничего не знает про DI — максимально сильный и независимый.
 class FilmService:
-    def __init__(self, redis: Redis, elastic: AsyncElasticsearch):
+    def __init__(
+            self,
+            redis: Redis,
+            elastic: AsyncElasticsearch,
+            genre_service: GenreService,
+    ):
         self.redis = redis
         self.elastic = elastic
+        self.genre_service = genre_service
+        self.index = config.ELASTIC_FILM_INDEX
+
+    async def get_by_id(self, film_id) -> FilmDetails:
+        try:
+            response = await self.elastic.get(index=self.index, id=film_id)
+            film_data = response["_source"]
+            _genres = [
+                await self.genre_service.get_by_name(genre_name)
+                for genre_name in film_data["genres"]
+            ]
+            film_data["genres"] = _genres
+            return FilmDetails(**film_data)
+        except NotFoundError:
+            logger.exception(
+                "Error occurred while fetching a document '%s'",
+                film_id,
+            )
+        except ValidationError:
+            logger.exception(
+                "Check a data structure of the document '%s'",
+                film_id,
+            )
+
+    async def search(
+            self, query: str, page_number: int, page_size: int
+    ) -> list[Film]:
+        es_query = {
+            "query": {
+                "multi_match": {
+                    "query": query,
+                }
+            },
+            "from": (page_number - 1) * page_size,
+            "size": page_size,
+        }
+        response = await self.elastic.search(index=self.index, body=es_query)
+        hits = response["hits"]["hits"]
+        films = [Film(**hit["_source"]) for hit in hits]
+        return films
+
+    async def get_films(
+            self,
+            sort: str,
+            page_number: int,
+            page_size: int,
+            genre_id: str = None,
+    ) -> list[Film]:
+        sort_field = sort.lstrip("-")
+        sort_order = "desc" if sort.startswith("-") else "asc"
+        es_query = {
+            "sort": [{sort_field: {"order": sort_order}}],
+            "from": (page_number - 1) * page_size,
+            "size": page_size,
+        }
+        if genre_id:
+            genre_name = await self.genre_service.get_name_by_id(genre_id)
+            es_query["query"] = {"match": {"genres": genre_name}}
+        response = await self.elastic.search(index=self.index, body=es_query)
+        hits = response["hits"]["hits"]
+        films = [Film(**hit["_source"]) for hit in hits]
+        return films
 
 
-# get_film_service — это провайдер FilmService.
-# С помощью Depends он сообщает, что ему необходимы Redis и Elasticsearch
-# Для их получения вы ранее создали функции-провайдеры в модуле db
-# Используем lru_cache-декоратор, чтобы создать объект сервиса в едином экземпляре (синглтона)
 @lru_cache()
 def get_film_service(
         redis: Redis = Depends(get_redis),
         elastic: AsyncElasticsearch = Depends(get_elastic),
+        genre_service: GenreService = Depends(get_genre_service),
 ) -> FilmService:
-    return FilmService(redis, elastic)
+    return FilmService(redis, elastic, genre_service)
