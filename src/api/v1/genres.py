@@ -9,7 +9,10 @@ router = APIRouter(prefix="/api/v1/genres", tags=["GenreService"])
 
 
 @router.get(
-    "/", response_model=list[Genre], description="Получение всех жанров"
+    "/",
+    response_model=list[Genre],
+    response_model_by_alias=False,
+    description="Получение всех жанров",
 )
 async def get_genres(
         genre_service: GenreService = Depends(get_genre_service),
@@ -17,7 +20,12 @@ async def get_genres(
     return await genre_service.get_genres()
 
 
-@router.get("/{genre_id}", response_model=Genre, description="Страница жанра")
+@router.get(
+    "/{genre_id}",
+    response_model=Genre,
+    response_model_by_alias=False,
+    description="Страница жанра",
+)
 async def get_genre_details(
         genre_id: str,
         genre_service: GenreService = Depends(get_genre_service),

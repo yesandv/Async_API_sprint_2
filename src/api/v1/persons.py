@@ -12,6 +12,7 @@ router = APIRouter(prefix="/api/v1/persons", tags=["PersonService"])
 @router.get(
     "/search",
     response_model=list[PersonWithFilms],
+    response_model_by_alias=False,
     description="Поиск по исполнителям",
 )
 async def search_person(
@@ -31,6 +32,7 @@ async def search_person(
 @router.get(
     "/{person_id}",
     response_model=PersonWithFilms,
+    response_model_by_alias=False,
     description="Страница исполнителя",
 )
 async def get_person_details(
@@ -48,6 +50,7 @@ async def get_person_details(
 @router.get(
     "/{person_id}/films",
     response_model=list[Film],
+    response_model_by_alias=False,
     description="Фильмы исполнителя",
 )
 async def get_person_film_works(
