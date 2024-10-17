@@ -2,7 +2,7 @@ from contextlib import asynccontextmanager
 
 from elasticsearch import AsyncElasticsearch
 from fastapi import FastAPI
-from fastapi.responses import ORJSONResponse
+from fastapi.responses import JSONResponse
 from redis.asyncio import Redis
 
 from src.api.v1 import films, persons, genres
@@ -27,7 +27,7 @@ app = FastAPI(
     title=config.PROJECT_NAME,
     docs_url="/api/docs",
     openapi_url="/api/openapi.json",
-    default_response_class=ORJSONResponse,
+    default_response_class=JSONResponse,
     lifespan=lifespan,
 )
 
