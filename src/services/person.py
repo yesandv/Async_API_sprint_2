@@ -6,7 +6,7 @@ from redis.asyncio import Redis
 
 from src.core import config
 from src.db.elastic import get_elastic
-from src.db.redis import get_redis
+from src.db.redis import get_redis, redis_cache
 from src.models.film import Film
 from src.models.person import PersonWithFilms
 from src.services.film import FilmService, get_film_service
@@ -41,19 +41,21 @@ class PersonService:
         persons = [PersonWithFilms(**hit["_source"]) for hit in hits]
         for person in persons:
             person_film_works = await self.film_service.get_by_person_name(
-                person.full_name
+                person.name
             )
             person.films = person_film_works
         return persons
 
+    @redis_cache("person", PersonWithFilms)
     async def get_by_id(self, person_id: str) -> PersonWithFilms:
         response = await self.elastic.get(index=self.index, id=person_id)
         person = PersonWithFilms(**response["_source"])
         person.films = await self.film_service.get_by_person_name(
-            person.full_name
+            person.name
         )
         return person
 
+    @redis_cache("pfw", Film)
     async def get_film_works_by_person_id(self, person_id: str) -> list[Film]:
         return await self.film_service.get_by_person_id(person_id)
 

@@ -6,5 +6,8 @@ ROLES = ["actors", "directors", "writers"]
 
 
 class PersonFilmWork(BaseModel):
-    uuid: UUID = Field(alias="id")
+    id: UUID = Field(alias="uuid")
     roles: list[str]
+
+    class Config:
+        populate_by_name = True

@@ -4,5 +4,8 @@ from pydantic import BaseModel, Field
 
 
 class Genre(BaseModel):
-    uuid: UUID = Field(alias="id")
+    id: UUID = Field(alias="uuid")
     name: str
+
+    class Config:
+        populate_by_name = True

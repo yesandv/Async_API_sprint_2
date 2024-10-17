@@ -11,7 +11,6 @@ router = APIRouter(prefix="/api/v1/films", tags=["FilmService"])
 @router.get(
     "/",
     response_model=list[Film],
-    response_model_by_alias=False,
     description="Получение всех фильмов",
 )
 async def get_films(
@@ -29,7 +28,6 @@ async def get_films(
 @router.get(
     "/search",
     response_model=list[Film],
-    response_model_by_alias=False,
     description="Поиск по фильмам",
 )
 async def search_film(
@@ -49,7 +47,6 @@ async def search_film(
 @router.get(
     "/{film_id}",
     response_model=FilmDetails,
-    response_model_by_alias=False,
     description="Страница фильма",
 )
 async def get_film_details(
@@ -66,7 +63,6 @@ async def get_film_details(
 @router.get(
     "/{film_id}/alike",
     response_model=list[Film],
-    response_model_by_alias=False,
     description="Похожие фильмы",
 )
 async def get_films_alike(

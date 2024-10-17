@@ -8,7 +8,7 @@ from redis.asyncio import Redis
 from src.core import config
 from src.core.logger import logger
 from src.db.elastic import get_elastic
-from src.db.redis import get_redis
+from src.db.redis import get_redis, redis_cache
 from src.models.film import FilmDetails, Film
 from src.models.genre import Genre
 from src.models.person_film_work import PersonFilmWork, ROLES
@@ -27,6 +27,7 @@ class FilmService:
         self.genre_service = genre_service
         self.index = config.ELASTIC_FILM_INDEX
 
+    @redis_cache("film", model=FilmDetails)
     async def get_by_id(self, film_id: str) -> FilmDetails:
         try:
             response = await self.elastic.get(index=self.index, id=film_id)

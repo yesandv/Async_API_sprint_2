@@ -7,9 +7,12 @@ from src.models.person import Person
 
 
 class Film(BaseModel):
-    uuid: UUID = Field(alias="id")
+    id: UUID = Field(alias="uuid")
     title: str
     imdb_rating: float | None
+
+    class Config:
+        populate_by_name = True
 
 
 class FilmDetails(Film):

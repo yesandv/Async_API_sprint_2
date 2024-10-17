@@ -7,7 +7,7 @@ from redis.asyncio import Redis
 from src.core import config
 from src.core.logger import logger
 from src.db.elastic import get_elastic
-from src.db.redis import get_redis
+from src.db.redis import get_redis, redis_cache
 from src.models.genre import Genre
 
 
@@ -33,6 +33,7 @@ class GenreService:
         genres = [Genre(**hit["_source"]) for hit in hits]
         return genres
 
+    @redis_cache("genre", Genre)
     async def get_by_id(self, genre_id: str) -> Genre:
         try:
             response = await self.elastic.get(index=self.index, id=genre_id)

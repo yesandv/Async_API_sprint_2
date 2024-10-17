@@ -24,6 +24,7 @@ services:
       - ./.env
     depends_on:
       - elasticsearch
+      - redis
     entrypoint: >
       sh -c "uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload"
 
@@ -36,3 +37,9 @@ services:
       - "80:80"
     depends_on:
       - fastapi
+
+  redis:
+    image: redis:latest
+    container_name: redis_cache
+    expose:
+      - "6379"
