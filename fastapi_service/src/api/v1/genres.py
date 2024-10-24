@@ -2,8 +2,8 @@ from http import HTTPStatus
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from src.models.genre import Genre
-from src.services.genre import GenreService, get_genre_service
+from fastapi_service.src.models.genre import Genre
+from fastapi_service.src.services.genre import GenreService, get_genre_service
 
 router = APIRouter(prefix="/api/v1/genres", tags=["GenreService"])
 

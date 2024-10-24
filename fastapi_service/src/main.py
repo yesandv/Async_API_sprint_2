@@ -5,9 +5,9 @@ from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 from redis.asyncio import Redis
 
-from src.api.v1 import films, persons, genres
-from src.core import config
-from src.db import redis, elastic
+from fastapi_service.src.api.v1 import films, persons, genres
+from fastapi_service.src.core import config
+from fastapi_service.src.db import redis, elastic
 
 
 @asynccontextmanager

@@ -2,7 +2,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
-from src.models.person_film_work import PersonFilmWork
+from fastapi_service.src.models.person_film_work import PersonFilmWork
 
 
 class Person(BaseModel):

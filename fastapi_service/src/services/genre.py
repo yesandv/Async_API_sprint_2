@@ -4,11 +4,11 @@ from elasticsearch import AsyncElasticsearch, NotFoundError
 from fastapi import Depends
 from redis.asyncio import Redis
 
-from src.core import config
-from src.core.logger import logger
-from src.db.elastic import get_elastic
-from src.db.redis import get_redis, redis_cache
-from src.models.genre import Genre
+from fastapi_service.src.core import config
+from fastapi_service.src.core.logger import logger
+from fastapi_service.src.db.elastic import get_elastic
+from fastapi_service.src.db.redis import get_redis, redis_cache
+from fastapi_service.src.models.genre import Genre
 
 
 class GenreService:

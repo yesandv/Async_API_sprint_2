@@ -3,7 +3,7 @@ from logging import config as logging_config
 
 from dotenv import load_dotenv
 
-from src.core.logger import LOGGING
+from fastapi_service.src.core.logger import LOGGING
 
 load_dotenv()
 

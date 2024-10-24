@@ -16,7 +16,7 @@ services:
   fastapi:
     build:
       context: .
-      dockerfile: src/Dockerfile
+      dockerfile: fastapi_service/Dockerfile
     container_name: fastapi_app
     expose:
       - "8000"

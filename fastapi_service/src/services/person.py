@@ -4,12 +4,12 @@ from elasticsearch import AsyncElasticsearch
 from fastapi import Depends
 from redis.asyncio import Redis
 
-from src.core import config
-from src.db.elastic import get_elastic
-from src.db.redis import get_redis, redis_cache
-from src.models.film import Film
-from src.models.person import PersonWithFilms
-from src.services.film import FilmService, get_film_service
+from fastapi_service.src.core import config
+from fastapi_service.src.db.elastic import get_elastic
+from fastapi_service.src.db.redis import get_redis, redis_cache
+from fastapi_service.src.models.film import Film
+from fastapi_service.src.models.person import PersonWithFilms
+from fastapi_service.src.services.film import FilmService, get_film_service
 
 
 class PersonService:

@@ -2,8 +2,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
-from src.models.genre import Genre
-from src.models.person import Person
+from fastapi_service.src.models.genre import Genre
+from fastapi_service.src.models.person import Person
 
 
 class Film(BaseModel):

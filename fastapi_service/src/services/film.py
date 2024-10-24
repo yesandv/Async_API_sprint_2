@@ -5,14 +5,14 @@ from fastapi import Depends
 from pydantic import ValidationError
 from redis.asyncio import Redis
 
-from src.core import config
-from src.core.logger import logger
-from src.db.elastic import get_elastic
-from src.db.redis import get_redis, redis_cache
-from src.models.film import FilmDetails, Film
-from src.models.genre import Genre
-from src.models.person_film_work import PersonFilmWork, ROLES
-from src.services.genre import GenreService, get_genre_service
+from fastapi_service.src.core import config
+from fastapi_service.src.core.logger import logger
+from fastapi_service.src.db.elastic import get_elastic
+from fastapi_service.src.db.redis import get_redis, redis_cache
+from fastapi_service.src.models.film import FilmDetails, Film
+from fastapi_service.src.models.genre import Genre
+from fastapi_service.src.models.person_film_work import PersonFilmWork, ROLES
+from fastapi_service.src.services.genre import GenreService, get_genre_service
 
 
 class FilmService:

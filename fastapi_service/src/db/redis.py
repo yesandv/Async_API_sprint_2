@@ -4,7 +4,7 @@ from typing import Optional, Callable, Any
 
 from redis.asyncio import Redis
 
-from src.core.encoder import UUIDEncoder
+from fastapi_service.src.core.encoder import UUIDEncoder
 
 redis: Optional[Redis] = None
 

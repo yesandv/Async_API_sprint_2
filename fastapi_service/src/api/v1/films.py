@@ -2,8 +2,8 @@ from http import HTTPStatus
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
-from src.models.film import FilmDetails, Film
-from src.services.film import FilmService, get_film_service
+from fastapi_service.src.models.film import FilmDetails, Film
+from fastapi_service.src.services.film import FilmService, get_film_service
 
 router = APIRouter(prefix="/api/v1/films", tags=["FilmService"])
 
