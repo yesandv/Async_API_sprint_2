@@ -31,7 +31,9 @@ async def get_request(client_session: ClientSession) -> Callable:
 
 @pytest_asyncio.fixture
 async def redis_session() -> AsyncGenerator[Redis, None]:
-    async with Redis() as session:
+    async with Redis(
+            host=test_settings.redis_host, port=test_settings.redis_port
+    ) as session:
         yield session
 
 
