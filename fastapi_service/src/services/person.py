@@ -1,10 +1,11 @@
 from functools import lru_cache
 
-from elasticsearch import AsyncElasticsearch
+from elasticsearch import AsyncElasticsearch, NotFoundError
 from fastapi import Depends
 from redis.asyncio import Redis
 
 from fastapi_service.src.core import config
+from fastapi_service.src.core.logger import logger
 from fastapi_service.src.db.elastic import get_elastic
 from fastapi_service.src.db.redis import get_redis, redis_cache
 from fastapi_service.src.models.film import Film
@@ -48,12 +49,18 @@ class PersonService:
 
     @redis_cache("person", PersonWithFilms)
     async def get_by_id(self, person_id: str) -> PersonWithFilms:
-        response = await self.elastic.get(index=self.index, id=person_id)
-        person = PersonWithFilms(**response["_source"])
-        person.films = await self.film_service.get_by_person_name(
-            person.name
-        )
-        return person
+        try:
+            response = await self.elastic.get(index=self.index, id=person_id)
+            person = PersonWithFilms(**response["_source"])
+            person.films = await self.film_service.get_by_person_name(
+                person.name
+            )
+            return person
+        except NotFoundError:
+            logger.exception(
+                "Error occurred while fetching a document '%s'",
+                person_id,
+            )
 
     @redis_cache("pfw", Film)
     async def get_film_works_by_person_id(self, person_id: str) -> list[Film]:
