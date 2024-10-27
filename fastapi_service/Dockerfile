@@ -7,5 +7,5 @@ COPY requirements.txt requirements.txt
 RUN pip install --upgrade pip \
     && pip install -r requirements.txt --no-cache-dir
 
-COPY src ./src
+COPY fastapi_service/src ./fastapi_service/src
 COPY .env .

@@ -26,7 +26,7 @@ services:
       - elasticsearch
       - redis
     entrypoint: >
-      sh -c "uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload"
+      sh -c "uvicorn fastapi_service.src.main:app --host 0.0.0.0 --port 8000 --reload"
 
   nginx:
     image: nginx:latest
