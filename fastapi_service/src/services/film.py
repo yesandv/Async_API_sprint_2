@@ -1,13 +1,16 @@
 from functools import lru_cache
 
-from elasticsearch import AsyncElasticsearch, NotFoundError
+from elasticsearch import AsyncElasticsearch
 from fastapi import Depends
 from pydantic import ValidationError
 from redis.asyncio import Redis
 
 from fastapi_service.src.core import config
 from fastapi_service.src.core.logger import logger
-from fastapi_service.src.db.elastic import get_elastic
+from fastapi_service.src.db.elastic import (
+    get_elastic,
+    ElasticsearchRepository,
+)
 from fastapi_service.src.db.redis import get_redis, redis_cache
 from fastapi_service.src.models.film import FilmDetails, Film
 from fastapi_service.src.models.genre import Genre
@@ -23,26 +26,21 @@ class FilmService:
             genre_service: GenreService,
     ):
         self.redis = redis
-        self.elastic = elastic
+        self.elastic = ElasticsearchRepository(elastic)
         self.genre_service = genre_service
         self.index = config.ELASTIC_FILM_INDEX
 
     @redis_cache("film", model=FilmDetails)
     async def get_by_id(self, film_id: str) -> FilmDetails:
         try:
-            response = await self.elastic.get(index=self.index, id=film_id)
-            film_data = response["_source"]
-            _genres = [
-                await self.genre_service.get_by_name(genre_name)
-                for genre_name in film_data["genres"]
-            ]
-            film_data["genres"] = _genres
-            return FilmDetails(**film_data)
-        except NotFoundError:
-            logger.exception(
-                "Error occurred while fetching a document '%s'",
-                film_id,
-            )
+            film_data = await self.elastic.get(index=self.index, id=film_id)
+            if film_data:
+                _genres = [
+                    await self.genre_service.get_by_name(genre_name)
+                    for genre_name in film_data["genres"]
+                ]
+                film_data["genres"] = _genres
+                return FilmDetails(**film_data)
         except ValidationError:
             logger.exception(
                 "Check a data structure of the document '%s'",
@@ -61,8 +59,7 @@ class FilmService:
             "from": (page_number - 1) * page_size,
             "size": page_size,
         }
-        response = await self.elastic.search(index=self.index, body=es_query)
-        hits = response["hits"]["hits"]
+        hits = await self.elastic.search(index=self.index, body=es_query)
         films = [Film(**hit["_source"]) for hit in hits]
         return films
 
@@ -83,8 +80,7 @@ class FilmService:
         if genre_id:
             genre = await self.genre_service.get_by_id(genre_id)
             es_query["query"] = {"match": {"genres": genre.name}}
-        response = await self.elastic.search(index=self.index, body=es_query)
-        hits = response["hits"]["hits"]
+        hits = await self.elastic.search(index=self.index, body=es_query)
         films = [Film(**hit["_source"]) for hit in hits]
         return films
 
@@ -106,8 +102,7 @@ class FilmService:
                 "bool": {"should": should_query, "minimum_should_match": 1}
             }
         }
-        response = await self.elastic.search(index=self.index, body=es_query)
-        hits = response["hits"]["hits"]
+        hits = await self.elastic.search(index=self.index, body=es_query)
         for hit in hits:
             film_data = hit["_source"]
             _roles = []
@@ -138,8 +133,8 @@ class FilmService:
                 "bool": {"should": should_query, "minimum_should_match": 1}
             }
         }
-        response = await self.elastic.search(index=self.index, body=es_query)
-        return [Film(**hit["_source"]) for hit in response["hits"]["hits"]]
+        hits = await self.elastic.search(index=self.index, body=es_query)
+        return [Film(**hit["_source"]) for hit in hits]
 
     async def get_by_genres(self, genres: list[Genre]) -> list[Film]:
         es_query = {
@@ -151,8 +146,7 @@ class FilmService:
                 }
             }
         }
-        response = await self.elastic.search(index=self.index, body=es_query)
-        hits = response["hits"]["hits"]
+        hits = await self.elastic.search(index=self.index, body=es_query)
         films = [Film(**hit["_source"]) for hit in hits]
         return films
 

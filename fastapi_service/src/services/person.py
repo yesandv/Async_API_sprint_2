@@ -1,12 +1,14 @@
 from functools import lru_cache
 
-from elasticsearch import AsyncElasticsearch, NotFoundError
+from elasticsearch import AsyncElasticsearch
 from fastapi import Depends
 from redis.asyncio import Redis
 
 from fastapi_service.src.core import config
-from fastapi_service.src.core.logger import logger
-from fastapi_service.src.db.elastic import get_elastic
+from fastapi_service.src.db.elastic import (
+    get_elastic,
+    ElasticsearchRepository,
+)
 from fastapi_service.src.db.redis import get_redis, redis_cache
 from fastapi_service.src.models.film import Film
 from fastapi_service.src.models.person import PersonWithFilms
@@ -21,7 +23,7 @@ class PersonService:
             film_service: FilmService,
     ):
         self.redis = redis
-        self.elastic = elastic
+        self.elastic = ElasticsearchRepository(elastic)
         self.film_service = film_service
         self.index = config.ELASTIC_PERSON_INDEX
 
@@ -37,8 +39,7 @@ class PersonService:
             "from": (page_number - 1) * page_size,
             "size": page_size,
         }
-        response = await self.elastic.search(index=self.index, body=es_query)
-        hits = response["hits"]["hits"]
+        hits = await self.elastic.search(index=self.index, body=es_query)
         persons = [PersonWithFilms(**hit["_source"]) for hit in hits]
         for person in persons:
             person_film_works = await self.film_service.get_by_person_name(
@@ -49,18 +50,13 @@ class PersonService:
 
     @redis_cache("person", PersonWithFilms)
     async def get_by_id(self, person_id: str) -> PersonWithFilms:
-        try:
-            response = await self.elastic.get(index=self.index, id=person_id)
-            person = PersonWithFilms(**response["_source"])
+        person_data = await self.elastic.get(index=self.index, id=person_id)
+        if person_data:
+            person = PersonWithFilms(**person_data)
             person.films = await self.film_service.get_by_person_name(
                 person.name
             )
             return person
-        except NotFoundError:
-            logger.exception(
-                "Error occurred while fetching a document '%s'",
-                person_id,
-            )
 
     @redis_cache("pfw", Film)
     async def get_film_works_by_person_id(self, person_id: str) -> list[Film]:

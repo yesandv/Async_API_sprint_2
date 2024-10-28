@@ -6,7 +6,10 @@ from redis.asyncio import Redis
 
 from fastapi_service.src.core import config
 from fastapi_service.src.core.logger import logger
-from fastapi_service.src.db.elastic import get_elastic
+from fastapi_service.src.db.elastic import (
+    get_elastic,
+    ElasticsearchRepository,
+)
 from fastapi_service.src.db.redis import get_redis, redis_cache
 from fastapi_service.src.models.genre import Genre
 
@@ -14,35 +17,29 @@ from fastapi_service.src.models.genre import Genre
 class GenreService:
     def __init__(self, redis: Redis, elastic: AsyncElasticsearch):
         self.redis = redis
-        self.elastic = elastic
+        self.elastic = ElasticsearchRepository(elastic)
         self.index = config.ELASTIC_GENRE_INDEX
 
     async def get_by_name(self, genre_name: str) -> Genre:
         es_query = {"query": {"match": {"name": genre_name}}}
-        response = await self.elastic.search(index=self.index, body=es_query)
         try:
-            if len(genre_data := response["hits"]["hits"]) > 0:
+            hits = await self.elastic.search(index=self.index, body=es_query)
+            if len(genre_data := hits) > 0:
                 return Genre(**genre_data[0]["_source"])
         except NotFoundError:
             logger.exception("'%s' genre wasn't found", genre_name)
 
     async def get_genres(self) -> list[Genre]:
         es_query = {"query": {"match_all": {}}}
-        response = await self.elastic.search(index=self.index, body=es_query)
-        hits = response["hits"]["hits"]
+        hits = await self.elastic.search(index=self.index, body=es_query)
         genres = [Genre(**hit["_source"]) for hit in hits]
         return genres
 
     @redis_cache("genre", Genre)
     async def get_by_id(self, genre_id: str) -> Genre:
-        try:
-            response = await self.elastic.get(index=self.index, id=genre_id)
-            return Genre(**response["_source"])
-        except NotFoundError:
-            logger.exception(
-                "Error occurred while fetching a document '%s'",
-                genre_id,
-            )
+        genre_data = await self.elastic.get(index=self.index, id=genre_id)
+        if genre_data:
+            return Genre(**genre_data)
 
 
 @lru_cache()
