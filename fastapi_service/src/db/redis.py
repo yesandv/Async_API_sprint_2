@@ -1,12 +1,12 @@
 import json
 from functools import wraps
-from typing import Optional, Callable, Any
+from typing import Callable, Any
 
 from redis.asyncio import Redis
 
 from fastapi_service.src.core.encoder import UUIDEncoder
 
-redis: Optional[Redis] = None
+redis: Redis | None = None
 
 
 async def get_redis() -> Redis:
