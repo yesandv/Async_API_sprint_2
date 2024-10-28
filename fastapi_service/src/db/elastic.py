@@ -1,9 +1,28 @@
-from typing import Optional
+from elasticsearch import AsyncElasticsearch, NotFoundError
 
-from elasticsearch import AsyncElasticsearch
+from fastapi_service.src.core.logger import logger
+from fastapi_service.src.db.search_repository import SearchRepository
 
-es: Optional[AsyncElasticsearch] = None
+es: AsyncElasticsearch | None = None
 
 
 async def get_elastic() -> AsyncElasticsearch:
     return es
+
+
+class ElasticsearchRepository(SearchRepository):
+    def __init__(self, elastic: AsyncElasticsearch):
+        self.elastic = elastic
+
+    async def search(self, index: str, body: dict) -> list[dict]:
+        response = await self.elastic.search(index=index, body=body)
+        return response["hits"]["hits"]
+
+    async def get(self, index: str, id: str) -> dict:
+        try:
+            response = await self.elastic.get(index=index, id=id)
+            return response["_source"]
+        except NotFoundError:
+            logger.exception(
+                "Error occurred while fetching a document '%s'", id
+            )
