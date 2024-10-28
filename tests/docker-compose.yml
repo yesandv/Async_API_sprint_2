@@ -1,0 +1,44 @@
+services:
+  test-elasticsearch:
+    image: elasticsearch:8.10.1
+    container_name: elasticsearch_engine
+    expose:
+      - "9200"
+    environment:
+      discovery.type: "single-node"
+      xpack.security.enabled: "false"
+
+  fastapi:
+    build:
+      context: ..
+      dockerfile: fastapi_service/Dockerfile
+    container_name: fastapi_app
+    expose:
+      - "8000"
+    env_file:
+      - ../tests/.env
+    depends_on:
+      - test-elasticsearch
+      - test-redis
+    entrypoint: >
+      sh -c "uvicorn fastapi_service.src.main:app --host 0.0.0.0 --port 8000 --reload"
+
+  test-redis:
+    image: redis:latest
+    container_name: redis_cache
+    expose:
+      - "6379"
+
+  tests:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: functional_tests
+    env_file:
+      - ./.env
+    depends_on:
+      - fastapi
+    entrypoint: >
+      sh -c "python3 tests/functional/utils/wait_for_es.py
+      && python3 tests/functional/utils/wait_for_redis.py
+      && pytest tests/functional/src"
