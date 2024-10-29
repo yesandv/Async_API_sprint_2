@@ -4,7 +4,7 @@ from typing import Callable, Any
 
 from redis.asyncio import Redis
 
-from fastapi_service.src.core.encoder import UUIDEncoder
+from fastapi_service.src.utils.encoder import UUIDEncoder
 
 redis: Redis | None = None
 
