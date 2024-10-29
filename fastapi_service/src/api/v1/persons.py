@@ -1,6 +1,6 @@
 from http import HTTPStatus
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException
 
 from fastapi_service.src.models.film import Film
 from fastapi_service.src.models.person import PersonWithFilms
@@ -8,6 +8,7 @@ from fastapi_service.src.services.person import (
     PersonService,
     get_person_service,
 )
+from fastapi_service.src.utils.pagination import Pagination
 
 router = APIRouter(prefix="/api/v1/persons", tags=["PersonService"])
 
@@ -19,11 +20,12 @@ router = APIRouter(prefix="/api/v1/persons", tags=["PersonService"])
 )
 async def search_person(
         query: str,
-        page_number: int = Query(1),
-        page_size: int = Query(50),
+        pagination: Pagination = Depends(),
         person_service: PersonService = Depends(get_person_service),
 ) -> list[PersonWithFilms]:
-    persons = await person_service.search(query, page_number, page_size)
+    persons = await person_service.search(
+        query, pagination.page_number, pagination.page_size
+    )
     if not persons:
         raise HTTPException(
             status_code=HTTPStatus.NOT_FOUND, detail="No people were found"
