@@ -60,20 +60,35 @@ class TestV1Persons:
         assert not actual_person["films"]
 
     @pytest.mark.asyncio
-    async def test_v1_persons_search_pagination(
-        self, flush_cache, write_data_to_es, get_request
+    async def test_v1_persons_search_limit(
+            self, flush_cache, write_data_to_es, get_request
     ):
-        person_data = generate_persons(64)
+        limit = 44
+        person_data = generate_persons(limit)
         new_first_name = "John"
         for person in person_data:
             first_name, *last_name = person["name"].split()
             person["name"] = f"{new_first_name} {' '.join(last_name)}"
         await write_data_to_es(person_data, test_settings.es_person_mapping)
 
-        params = {"query": new_first_name, "page_number": 1, "page_size": 100}
+        params = {
+            "query": new_first_name, "page_number": 1, "page_size": limit
+        }
         response, _ = await get_request(self.path + "/search", params=params)
 
-        assert (total_count := len(response)) == len(person_data)
+        assert len(response) == limit
+
+    @pytest.mark.asyncio
+    async def test_v1_persons_search_pagination(
+            self, flush_cache, write_data_to_es, get_request
+    ):
+        total_count = 64
+        person_data = generate_persons(total_count)
+        new_last_name = "Doe"
+        for person in person_data:
+            *first_name, last_name = person["name"].split()
+            person["name"] = f"{' '.join(first_name)} {new_last_name}"
+        await write_data_to_es(person_data, test_settings.es_person_mapping)
 
         person_ids = []
         page_number, page_size = 1, 10
@@ -81,7 +96,7 @@ class TestV1Persons:
 
         while total_retrieved < total_count:
             params = {
-                "query": new_first_name,
+                "query": new_last_name,
                 "page_number": page_number,
                 "page_size": page_size,
             }
