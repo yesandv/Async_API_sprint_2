@@ -22,18 +22,17 @@ class FilmService:
     def __init__(
             self,
             redis: Redis,
-            elastic: AsyncElasticsearch,
+            elastic: ElasticsearchRepository,
             genre_service: GenreService,
     ):
         self.redis = redis
-        self.elastic = ElasticsearchRepository(elastic)
+        self.elastic = elastic
         self.genre_service = genre_service
-        self.index = config.ELASTIC_FILM_INDEX
 
     @redis_cache("film", model=FilmDetails)
     async def get_by_id(self, film_id: str) -> FilmDetails:
         try:
-            film_data = await self.elastic.get(index=self.index, id=film_id)
+            film_data = await self.elastic.get(doc_id=film_id)
             if film_data:
                 _genres = [
                     await self.genre_service.get_by_name(genre_name)
@@ -59,7 +58,7 @@ class FilmService:
             "from": (page_number - 1) * page_size,
             "size": page_size,
         }
-        hits = await self.elastic.search(index=self.index, body=es_query)
+        hits = await self.elastic.search(body=es_query)
         films = [Film(**hit["_source"]) for hit in hits]
         return films
 
@@ -80,7 +79,7 @@ class FilmService:
         if genre_id:
             genre = await self.genre_service.get_by_id(genre_id)
             es_query["query"] = {"match": {"genres": genre.name}}
-        hits = await self.elastic.search(index=self.index, body=es_query)
+        hits = await self.elastic.search(body=es_query)
         films = [Film(**hit["_source"]) for hit in hits]
         return films
 
@@ -102,7 +101,7 @@ class FilmService:
                 "bool": {"should": should_query, "minimum_should_match": 1}
             }
         }
-        hits = await self.elastic.search(index=self.index, body=es_query)
+        hits = await self.elastic.search(body=es_query)
         for hit in hits:
             film_data = hit["_source"]
             _roles = []
@@ -133,7 +132,7 @@ class FilmService:
                 "bool": {"should": should_query, "minimum_should_match": 1}
             }
         }
-        hits = await self.elastic.search(index=self.index, body=es_query)
+        hits = await self.elastic.search(body=es_query)
         return [Film(**hit["_source"]) for hit in hits]
 
     async def get_by_genres(self, genres: list[Genre]) -> list[Film]:
@@ -146,7 +145,7 @@ class FilmService:
                 }
             }
         }
-        hits = await self.elastic.search(index=self.index, body=es_query)
+        hits = await self.elastic.search(body=es_query)
         films = [Film(**hit["_source"]) for hit in hits]
         return films
 
@@ -157,4 +156,8 @@ def get_film_service(
         elastic: AsyncElasticsearch = Depends(get_elastic),
         genre_service: GenreService = Depends(get_genre_service),
 ) -> FilmService:
-    return FilmService(redis, elastic, genre_service)
+    return FilmService(
+        redis,
+        ElasticsearchRepository(elastic, config.ELASTIC_FILM_INDEX),
+        genre_service
+    )

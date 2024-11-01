@@ -19,11 +19,11 @@ class PersonService:
     def __init__(
             self,
             redis: Redis,
-            elastic: AsyncElasticsearch,
+            elastic: ElasticsearchRepository,
             film_service: FilmService,
     ):
         self.redis = redis
-        self.elastic = ElasticsearchRepository(elastic)
+        self.elastic = elastic
         self.film_service = film_service
         self.index = config.ELASTIC_PERSON_INDEX
 
@@ -39,7 +39,7 @@ class PersonService:
             "from": (page_number - 1) * page_size,
             "size": page_size,
         }
-        hits = await self.elastic.search(index=self.index, body=es_query)
+        hits = await self.elastic.search(body=es_query)
         persons = [PersonWithFilms(**hit["_source"]) for hit in hits]
         for person in persons:
             person_film_works = await self.film_service.get_by_person_name(
@@ -50,7 +50,7 @@ class PersonService:
 
     @redis_cache("person", PersonWithFilms)
     async def get_by_id(self, person_id: str) -> PersonWithFilms:
-        person_data = await self.elastic.get(index=self.index, id=person_id)
+        person_data = await self.elastic.get(doc_id=person_id)
         if person_data:
             person = PersonWithFilms(**person_data)
             person.films = await self.film_service.get_by_person_name(
@@ -69,4 +69,8 @@ def get_person_service(
         elastic: AsyncElasticsearch = Depends(get_elastic),
         film_service: FilmService = Depends(get_film_service),
 ) -> PersonService:
-    return PersonService(redis, elastic, film_service)
+    return PersonService(
+        redis,
+        ElasticsearchRepository(elastic, config.ELASTIC_PERSON_INDEX),
+        film_service,
+    )

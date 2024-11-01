@@ -11,18 +11,19 @@ async def get_elastic() -> AsyncElasticsearch:
 
 
 class ElasticsearchRepository(SearchRepository):
-    def __init__(self, elastic: AsyncElasticsearch):
+    def __init__(self, elastic: AsyncElasticsearch, index: str):
         self.elastic = elastic
+        self.index = index
 
-    async def search(self, index: str, body: dict) -> list[dict]:
-        response = await self.elastic.search(index=index, body=body)
+    async def search(self, body: dict) -> list[dict]:
+        response = await self.elastic.search(index=self.index, body=body)
         return response["hits"]["hits"]
 
-    async def get(self, index: str, id: str) -> dict:
+    async def get(self, doc_id: str) -> dict:
         try:
-            response = await self.elastic.get(index=index, id=id)
+            response = await self.elastic.get(index=self.index, id=doc_id)
             return response["_source"]
         except NotFoundError:
             logger.exception(
-                "Error occurred while fetching a document '%s'", id
+                "Error occurred while fetching a document '%s'", doc_id
             )
