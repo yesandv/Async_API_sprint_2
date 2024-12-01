@@ -36,7 +36,7 @@ class FilmService:
             if film_data:
                 _genres = [
                     await self.genre_service.get_by_name(genre_name)
-                    for genre_name in film_data["genres"].split(", ")
+                    for genre_name in film_data["genres"]
                 ]
                 film_data["genres"] = _genres
                 return FilmDetails(**film_data)
